@@ -5,7 +5,7 @@ The pcemigrate.sh script is a wrapper script that utilize workloader to export a
 
 ## How to get  started
 
-Download the pcemigrate.tar.tgz file from a  [releases page](https://github.com/edward2705/pcemigrate/releases).
+Download the pcemigrate.tar.gz file from a  [releases page](https://github.com/edward2705/pcemigrate/releases).
 Check a [documentation](https://github.com/edward2705/pcemigrate/wiki) for more details
 
 ## License
