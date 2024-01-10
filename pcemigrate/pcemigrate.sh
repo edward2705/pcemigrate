@@ -22,8 +22,8 @@
 # Comments: Script to migrate PCE Objects 
 #           Supported versions: 19.3.6,20.x,21.x,22.x
 # Dependency: Script requires workloader to work
-# Version : 1.4
-# Date    : 12-2023
+# Version : 1.6
+# Date    : 01-2024
 
 
 BASEDIR=$(dirname $0)
@@ -43,7 +43,7 @@ log_print() {
 
 export_objects() {
   PCE=$1
-  WORKLOADER_CMDS="label-export svc-export ipl-export labelgroup-export wkld-export ruleset-export rule-export eb-export"
+  WORKLOADER_CMDS="label-dimension-export label-export svc-export ipl-export labelgroup-export wkld-export ruleset-export rule-export eb-export"
   for WCMD in $(echo $WORKLOADER_CMDS); do
     OUTFILE="$DATADIR/$PCE.$WCMD.csv"
     BACKUPFILE="$DATADIR/backup/$PCE.$WCMD.$DTE.csv"
@@ -64,6 +64,7 @@ export_objects() {
     [ "$WCMD" = "labelgroup-export" ] &&  cat $OUTFILE > $OUTFILE.import
     [ "$WCMD" = "label-export" ] &&  cat $OUTFILE  > $OUTFILE.import
     [ "$WCMD" = "wkld-export" ] &&  cat $OUTFILE  > $OUTFILE.import
+    [ "$WCMD" = "label-dimension-export" ] &&  cat $OUTFILE  > $OUTFILE.import
     [ "$WCMD" = "ipl-export" ] &&  cat $OUTFILE | grep -v "^Any "  > $OUTFILE.import
     
   done
@@ -110,12 +111,12 @@ PCE=$1
 
 import_objects() {
   PCE=$1
-  WORKLOADER_CMDS="label-import svc-import ipl-import labelgroup-import wkld-import ruleset-import rule-import eb-import"
+  WORKLOADER_CMDS="label-dimension-import label-import svc-import ipl-import labelgroup-import wkld-import ruleset-import rule-import eb-import"
   for WCMD in $(echo $WORKLOADER_CMDS); do
     WCMD_EXPORT=$(echo $WCMD | sed 's/import/export/g')
     OUTFILE="$DATADIR/$PCE.$WCMD_EXPORT.csv.import"
     echo 
-    if [ "$WCMD" = "svc-import" ] || [ "$WCMD" = "label-import" ] || [ "$WCMD" = "ipl-import" ] || [ "$WCMD" = "labelgroup-import" ] || [ "$WCMD" = "eb-import" ] ; then
+    if [ "$WCMD" = "svc-import" ] || [ "$WCMD" = "label-dimension-import" ] || [ "$WCMD" = "label-import" ] || [ "$WCMD" = "ipl-import" ] || [ "$WCMD" = "labelgroup-import" ] || [ "$WCMD" = "eb-import" ] ; then
       echo ". executing $WORKLOADER $WCMD $OUTFILE --update-pce --no-prompt"
       $WORKLOADER $WCMD $OUTFILE --update-pce --no-prompt
     fi
