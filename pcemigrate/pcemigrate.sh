@@ -43,7 +43,7 @@ log_print() {
 
 export_objects() {
   PCE=$1
-  WORKLOADER_CMDS="label-dimension-export label-export svc-export ipl-export labelgroup-export wkld-export ruleset-export rule-export eb-export"
+  WORKLOADER_CMDS="label-dimension-export label-export adgroup-export svc-export ipl-export labelgroup-export wkld-export ruleset-export rule-export eb-export"
   for WCMD in $(echo $WORKLOADER_CMDS); do
     OUTFILE="$DATADIR/$PCE.$WCMD.csv"
     BACKUPFILE="$DATADIR/backup/$PCE.$WCMD.$DTE.csv"
@@ -63,6 +63,7 @@ export_objects() {
     [ "$WCMD" = "svc-export" ] &&  cat $OUTFILE | grep -v "All Services" > $OUTFILE.import
     [ "$WCMD" = "labelgroup-export" ] &&  cat $OUTFILE > $OUTFILE.import
     [ "$WCMD" = "label-export" ] &&  cat $OUTFILE  > $OUTFILE.import
+    [ "$WCMD" = "adgroup-export" ] &&  cat $OUTFILE  > $OUTFILE.import
     [ "$WCMD" = "wkld-export" ] &&  cat $OUTFILE  > $OUTFILE.import
     [ "$WCMD" = "label-dimension-export" ] &&  cat $OUTFILE  > $OUTFILE.import
     [ "$WCMD" = "ipl-export" ] &&  cat $OUTFILE | grep -v "^Any "  > $OUTFILE.import
@@ -111,15 +112,25 @@ PCE=$1
 
 import_objects() {
   PCE=$1
-  WORKLOADER_CMDS="label-dimension-import label-import svc-import ipl-import labelgroup-import wkld-import ruleset-import rule-import eb-import"
+  #WORKLOADER="$BASEDIR/workloader.910"
+  WORKLOADER="$BASEDIR/workloader"
+  WORKLOADER_CMDS="label-dimension-import label-import svc-import ipl-import adgroup-import labelgroup-import wkld-import ruleset-import rule-import eb-import"
   for WCMD in $(echo $WORKLOADER_CMDS); do
     WCMD_EXPORT=$(echo $WCMD | sed 's/import/export/g')
     OUTFILE="$DATADIR/$PCE.$WCMD_EXPORT.csv.import"
+    WORKLOADER="$BASEDIR/workloader"
     echo 
-    if [ "$WCMD" = "svc-import" ] || [ "$WCMD" = "label-dimension-import" ] || [ "$WCMD" = "label-import" ] || [ "$WCMD" = "ipl-import" ] || [ "$WCMD" = "labelgroup-import" ] || [ "$WCMD" = "eb-import" ] ; then
+
+    # workaround for icmp = 0
+    if [ "$WCMD" = "svc-import" ]; then
+       WORKLOADER="$BASEDIR/workloader.910"
+    fi
+
+    if [ "$WCMD" = "svc-import" ] || [ "$WCMD" = "adgroup-import" ] || [ "$WCMD" = "label-dimension-import" ] || [ "$WCMD" = "label-import" ] || [ "$WCMD" = "ipl-import" ] || [ "$WCMD" = "labelgroup-import" ] || [ "$WCMD" = "eb-import" ] ; then
       echo ". executing $WORKLOADER $WCMD $OUTFILE --update-pce --no-prompt"
       $WORKLOADER $WCMD $OUTFILE --update-pce --no-prompt
     fi
+
 
     if [ "$WCMD" = "wkld-import" ]; then
       echo ". executing $WORKLOADER $WCMD $OUTFILE --umwl --update-pce --no-prompt"
