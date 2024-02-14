@@ -23,7 +23,7 @@
 #           Supported versions: 19.3.6,20.x,21.x,22.x
 # Dependency: Script requires workloader to work
 # Version : 1.6
-# Date    : 01-2024
+# Date    : 12-2023
 
 
 BASEDIR=$(dirname $0)
@@ -124,9 +124,11 @@ import_objects() {
     # workaround for icmp = 0
     if [ "$WCMD" = "svc-import" ]; then
        WORKLOADER="$BASEDIR/workloader.910"
+       WORKLOADER="$BASEDIR/workloader"
+       $WORKLOADER $WCMD $OUTFILE --update-pce --no-prompt --update-on-name
     fi
 
-    if [ "$WCMD" = "svc-import" ] || [ "$WCMD" = "adgroup-import" ] || [ "$WCMD" = "label-dimension-import" ] || [ "$WCMD" = "label-import" ] || [ "$WCMD" = "ipl-import" ] || [ "$WCMD" = "labelgroup-import" ] || [ "$WCMD" = "eb-import" ] ; then
+    if [ "$WCMD" = "adgroup-import" ] || [ "$WCMD" = "label-dimension-import" ] || [ "$WCMD" = "label-import" ] || [ "$WCMD" = "ipl-import" ] || [ "$WCMD" = "labelgroup-import" ] || [ "$WCMD" = "eb-import" ] ; then
       echo ". executing $WORKLOADER $WCMD $OUTFILE --update-pce --no-prompt"
       $WORKLOADER $WCMD $OUTFILE --update-pce --no-prompt
     fi
@@ -146,8 +148,8 @@ import_objects() {
 }
 
 create_umwl() {
-  PCE=$1
-  WKLD_HOST=$2
+  PCE="$1"
+  WKLD_HOST="$2"
   WCMD="wkld-export"
   MANAGED_FILE="$DATADIR/$PCE.wkld-export-managed.csv"
   OUTFILE="$DATADIR/$PCE.$WCMD-unmanaged.csv"
