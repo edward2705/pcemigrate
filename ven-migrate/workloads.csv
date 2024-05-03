@@ -1,0 +1,3 @@
+hostname,app,env,loc,role,enforcement
+test-wkld2,a.app1,e.prod,l.nj,,full
+test-wkld1,a.app1,e.prod,l.ny,r.web,visibility_only
