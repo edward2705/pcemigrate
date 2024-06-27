@@ -1,12 +1,15 @@
-#!/bin/bash
+#!/bin/sh
 #
-# Script       : ven-migrate.sh
-# Comments     : script to unpair and repair the VEN
-# Dependency   : requires workloads.csv generated from workloader or pcemigrate.sh script
-#              : requires agent.conf to configure agent parameters
-# Version      : 1.9
-# Last Modified: 05-2024
-
+# Script    : ven-migrate.sh
+# Comments  : script to unpair and repair the VEN
+# Dependency: requires workloads.csv generated from workloader or pcemigrate.sh script
+#           : requires agent.conf to configure agent parameters
+# Version   : 1.9a
+# Date      : 12-2023
+#           : 02-2024
+#           : Added proxy-server supprt
+#           : 06-2024
+#           : added fix for ven-ctl single-quote parameter
 
 BDIR=$(dirname $0)
 WKLD_FILE="${BDIR}/workloads.csv"
@@ -16,6 +19,10 @@ USE_CONFIGFILE=""
 migrate_type=""
 VENDIR=""
 port=""
+APP=""
+ENVM=""
+LOC=""
+ROLE=""
 APP_PARAM=""
 ENV_PARAM=""
 LOC_PARAM=""
@@ -23,6 +30,7 @@ ROLE_PARAM=""
 ENFORCED_PARAM=""
 ENFORCEMENT_MODE=""
 DEBUG=1
+APP=""
 
 
 usage() {
@@ -54,8 +62,8 @@ debug_print() {
 
 get_workload_label() {
    if [ -r $WKLD_FILE ]; then
-     WKLD_LABEL=$(cat $WKLD_FILE | uniq | grep ^$WKLD_HOST)
-     APP=$(echo $WKLD_LABEL | cut -d, -f2)
+     WKLD_LABEL=$(cat $WKLD_FILE | uniq | grep ^$WKLD_HOST | tr -d '\r' | tr -d '\n')
+     APP=$(echo $WKLD_LABEL | cut -d, -f2 )
      ENVM=$(echo $WKLD_LABEL | cut -d, -f3)
      LOC=$(echo $WKLD_LABEL | cut -d, -f4)
      ROLE=$(echo $WKLD_LABEL | cut -d, -f5)
@@ -95,10 +103,60 @@ ven_activate() {
   debug_print "workload: $WKLD_HOST; role: $ROLE; app: $APP; env: $ENVM; loc: $LOC; enforcement_mode: $ENFORCEMENT_MODE"
   if [ -z "$proxy_server" ]; then
     debug_print "$VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code $ENFORCED_PARAM $ROLE_PARAM $APP_PARAM $ENV_PARAM $LOC_PARAM"
-    $VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code $ENFORCED_PARAM $ROLE_PARAM $APP_PARAM $ENV_PARAM $LOC_PARAM
+
+    # workaround bug on ven-ctl adding single-quote on passing parameter
+    if [[ $(echo "$APP" | grep -o " " | wc -l) -gt 0 ]] && [[ $(echo "$ENVM" | grep -o " " | wc -l) -gt 0 ]] && [[ $(echo "$LOC" | grep -o " " | wc -l) -gt 0 ]] && [[ $(echo "$ROLE" | grep -o " " | wc -l) -gt 0 ]]; then
+       $VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code $ENFORCED_PARAM $ROLE_PARAM --role "$ROLE" --app "$APP"  --env "$ENVM" --loc "$LOC" 
+    elif [[ $(echo "$APP" | grep -o " " | wc -l) -gt 0 ]] && [[ $(echo "$ENVM" | grep -o " " | wc -l) -gt 0 ]] && [[ $(echo "$LOC" | grep -o " " | wc -l) -gt 0 ]]; then
+       $VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code $ENFORCED_PARAM $ROLE_PARAM --app "$APP" --env "$ENVM" --loc "$LOC"
+    elif [[ $(echo "$APP" | grep -o " " | wc -l) -gt 0 ]] && [[ $(echo "$ENVM" | grep -o " " | wc -l) -gt 0 ]]; then
+       $VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code $ENFORCED_PARAM $ROLE_PARAM --app "$APP" --env "$ENVM" $LOC_PARAM 
+    elif [[ $(echo "$ENVM" | grep -o " " | wc -l) -gt 0 ]] && [[ $(echo "$LOC" | grep -o " " | wc -l) -gt 0 ]]; then
+       $VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code $ENFORCED_PARAM $ROLE_PARAM $APP_PARAM --env "$ENVM" -loc "$LOC" 
+    elif [[ $(echo "$APP" | grep -o " " | wc -l) -gt 0 ]] && [[ $(echo "$LOC" | grep -o " " | wc -l) -gt 0 ]]; then
+       $VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code $ENFORCED_PARAM $ROLE_PARAM --app "$APP" $ENV_PARAM --loc "$LOC"
+    elif [[ $(echo "$ROLE" | grep -o " " | wc -l) -gt 0 ]] && [[ $(echo "$APP" | grep -o " " | wc -l) -gt 0 ]]; then
+       $VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code $ENFORCED_PARAM --role "$ROLE" --app "$APP" $ENV_PARAM $LOC_PARAM 
+    elif [[ $(echo "$APP" | grep -o " " | wc -l) -gt 0 ]] && [[ $(echo "$LOC" | grep -o " " | wc -l) -gt 0 ]]; then
+       $VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code $ENFORCED_PARAM $ROLE_PARAM --app "$APP" $ENV_PARAM --loc "$LOC"
+    elif [[ $(echo "$APP" | grep -o " " | wc -l) -gt 0 ]]; then
+       $VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code $ENFORCED_PARAM $ROLE_PARAM --app "$APP" $ENV_PARAM $LOC_PARAM
+    elif [[ $(echo "$ENVM" | grep -o " " | wc -l) -gt 0 ]]; then
+       $VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code $ENFORCED_PARAM $ROLE_PARAM $APP_PARAM --env "$ENVM" $LOC_PARAM
+    elif [[ $(echo "$LOC" | grep -o " " | wc -l) -gt 0 ]]; then
+       $VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code $ENFORCED_PARAM $ROLE_PARAM $APP_PARAM $LOC_PARAM --loc "$LOC"
+    elif [[ $(echo "$ROLE" | grep -o " " | wc -l) -gt 0 ]]; then
+       $VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code $ENFORCED_PARAM --role "$ROLE" $APP_PARAM $LOC_PARAM $LOC_PARAM
+    else 
+       $VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code $ENFORCED_PARAM $ROLE_PARAM $APP_PARAM $ENV_PARAM $LOC_PARAM
+    fi
   else
     debug_print "$VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code --proxy-server $proxy_server $ENFORCED_PARAM $ENFORCEMENT_MODE $ROLE_PARAM $APP_PARAM $ENV_PARAM $LOC_PARAM"
-    $VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code --proxy-server $proxy_server $ENFORCED_PARAM $ROLE_PARAM $APP_PARAM $ENV_PARAM $LOC_PARAM
+    if [[ $(echo "$APP" | grep -o " " | wc -l) -gt 0 ]] && [[ $(echo "$ENVM" | grep -o " " | wc -l) -gt 0 ]] && [[ $(echo "$LOC" | grep -o " " | wc -l) -gt 0 ]] && [[ $(echo "$ROLE" | grep -o " " | wc -l) -gt 0 ]]; then
+       $VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code --proxy-server $proxy_server $ENFORCED_PARAM $ROLE_PARAM --role "$ROLE" --app "$APP"  --env "$ENVM" --loc "$LOC" 
+    elif [[ $(echo "$APP" | grep -o " " | wc -l) -gt 0 ]] && [[ $(echo "$ENVM" | grep -o " " | wc -l) -gt 0 ]] && [[ $(echo "$LOC" | grep -o " " | wc -l) -gt 0 ]]; then
+       $VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code --proxy-server $proxy_server $ENFORCED_PARAM $ROLE_PARAM --app "$APP" --env "$ENVM" --loc "$LOC"
+    elif [[ $(echo "$APP" | grep -o " " | wc -l) -gt 0 ]] && [[ $(echo "$ENVM" | grep -o " " | wc -l) -gt 0 ]]; then
+       $VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code --proxy-server $proxy_server $ENFORCED_PARAM $ROLE_PARAM --app "$APP" --env "$ENVM" $LOC_PARAM 
+    elif [[ $(echo "$ENVM" | grep -o " " | wc -l) -gt 0 ]] && [[ $(echo "$LOC" | grep -o " " | wc -l) -gt 0 ]]; then
+       $VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code --proxy-server $proxy_server $ENFORCED_PARAM $ROLE_PARAM $APP_PARAM --env "$ENVM" -loc "$LOC" 
+    elif [[ $(echo "$APP" | grep -o " " | wc -l) -gt 0 ]] && [[ $(echo "$LOC" | grep -o " " | wc -l) -gt 0 ]]; then
+       $VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code --proxy-server $proxy_server $ENFORCED_PARAM $ROLE_PARAM --app "$APP" $ENV_PARAM --loc "$LOC"
+    elif [[ $(echo "$ROLE" | grep -o " " | wc -l) -gt 0 ]] && [[ $(echo "$APP" | grep -o " " | wc -l) -gt 0 ]]; then
+       $VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code --proxy-server $proxy_server $ENFORCED_PARAM --role "$ROLE" --app "$APP" $ENV_PARAM $LOC_PARAM 
+    elif [[ $(echo "$APP" | grep -o " " | wc -l) -gt 0 ]] && [[ $(echo "$LOC" | grep -o " " | wc -l) -gt 0 ]]; then
+       $VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code --proxy-server $proxy_server $ENFORCED_PARAM $ROLE_PARAM --app "$APP" $ENV_PARAM --loc "$LOC"
+    elif [[ $(echo "$APP" | grep -o " " | wc -l) -gt 0 ]]; then
+       $VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code --proxy-server $proxy_server $ENFORCED_PARAM $ROLE_PARAM --app "$APP" $ENV_PARAM $LOC_PARAM
+    elif [[ $(echo "$ENVM" | grep -o " " | wc -l) -gt 0 ]]; then
+       $VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code --proxy-server $proxy_server $ENFORCED_PARAM $ROLE_PARAM $APP_PARAM --env "$ENVM" $LOC_PARAM
+    elif [[ $(echo "$LOC" | grep -o " " | wc -l) -gt 0 ]]; then
+       $VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code --proxy-server $proxy_server $ENFORCED_PARAM $ROLE_PARAM $APP_PARAM $LOC_PARAM --loc "$LOC"
+    elif [[ $(echo "$ROLE" | grep -o " " | wc -l) -gt 0 ]]; then
+       $VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code --proxy-server $proxy_server $ENFORCED_PARAM --role "$ROLE" $APP_PARAM $LOC_PARAM $LOC_PARAM
+    else 
+       $VENDIR/illumio-ven-ctl activate --management-server $pce:$port --activation-code $activation_code --proxy-server $proxy_server $ENFORCED_PARAM $ROLE_PARAM $APP_PARAM $ENV_PARAM $LOC_PARAM
+    fi
   fi
   echo
 }
@@ -186,5 +244,4 @@ debug_print "checking ven status"
 $VENDIR/illumio-ven-ctl status
 
 exit 0
-
 
